@@ -1,0 +1,16 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+  functions = "netlify/functions"
+
+# Rewrite /api/translate → Netlify function, so App.jsx calls /api/translate as normal
+[[redirects]]
+  from = "/api/translate"
+  to = "/.netlify/functions/translate"
+  status = 200
+
+# SPA fallback: all other routes serve index.html (needed for React Router if added later)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
