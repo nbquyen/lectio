@@ -765,6 +765,11 @@ function ReaderView({ doc, onUpdateDoc, vocabSet, onAddVocab, onBack }) {
                 {translation.pronunciation && <span>{translation.pronunciation}</span>}
               </div>
             )}
+            {translation.via === "google_translate" && (
+              <div style={{ fontFamily: "var(--font-ui)", fontSize: 11, color: "var(--ink-faint)", marginBottom: 6, fontStyle: "italic" }}>
+                🔄 Kết quả từ Google Dịch (Gemini tạm thời không khả dụng)
+              </div>
+            )}
             <button style={styles.saveBtn} onClick={saveCard}>
               <Plus size={14} /> Lưu vào kho từ
             </button>
@@ -1108,7 +1113,7 @@ function ReviewView({ vocab, folders, onDone }) {
     if (reviewMode === "typing" && !checkResult) setTimeout(() => inputRef.current?.focus(), 50);
   }, [reviewMode, idx, checkResult]);
 
-  // Keyboard nav
+  // Keyboard nav + Ctrl+Alt+S to speak
   useEffect(() => {
     const handler = (e) => {
       if (e.key === "ArrowRight" && reviewMode === "flashcard" && flipped) goNext();
@@ -1116,10 +1121,16 @@ function ReviewView({ vocab, folders, onDone }) {
       if (e.key === " " && reviewMode === "flashcard" && !e.target.matches("input,textarea")) {
         e.preventDefault(); setFlipped(f => !f);
       }
+      // Ctrl+Alt+S — speak current card word
+      if (e.ctrlKey && e.altKey && e.key.toLowerCase() === "s") {
+        e.preventDefault();
+        const current = cards[idx];
+        if (current) speak(current.original, current.sourceLang || "en");
+      }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [reviewMode, flipped, idx]);
+  }, [reviewMode, flipped, idx, cards]);
 
   const goNext = () => { setIdx(i => (i + 1) % Math.max(cards.length, 1)); setFlipped(false); setTypedAnswer(""); setCheckResult(null); };
   const goPrev = () => { setIdx(i => (i - 1 + Math.max(cards.length, 1)) % Math.max(cards.length, 1)); setFlipped(false); setTypedAnswer(""); setCheckResult(null); };
@@ -1201,7 +1212,7 @@ function ReviewView({ vocab, folders, onDone }) {
                   <button style={styles.speakBtn}
                     onClick={e => { e.stopPropagation(); speak(card.original, card.sourceLang || "en"); }}>
                     🔊 Nghe</button>
-                  <div style={styles.flashHint}>Bấm thẻ để xem nghĩa · Space lật</div>
+                  <div style={styles.flashHint}>Bấm thẻ để xem nghĩa · Space lật · Ctrl+Alt+S nghe</div>
                 </div>
               ) : (
                 <div style={styles.flashBack}>
