@@ -314,7 +314,16 @@ export default function App() {
           <LibraryView
             docs={docs}
             onAdd={addDoc}
-            onOpen={(d) => { setActiveDoc(d); setView("reader"); }}
+            onOpen={(d) => {
+              // Re-read from localStorage to get latest focusIdx
+              try {
+                const raw = localStorage.getItem("lectio-library-docs-v1");
+                const saved = raw ? JSON.parse(raw) : [];
+                const fresh = saved.find(x => x.id === d.id) || d;
+                setActiveDoc(fresh);
+              } catch { setActiveDoc(d); }
+              setView("reader");
+            }}
             onDelete={deleteDoc}
             setLoading={setLoading}
             setLoadingMsg={setLoadingMsg}
@@ -607,16 +616,24 @@ function ReaderView({ doc, onUpdateDoc, vocabSet, onAddVocab, onBack }) {
   const [translateError, setTranslateError] = useState(null);
   const [showSettings, setShowSettings] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
-  const [focusIdx, setFocusIdx] = useState(doc.focusIdx || 0);
+  const [focusIdx, setFocusIdx] = useState(() => doc.focusIdx || 0);
+  const focusIdxRef = useRef(doc.focusIdx || 0);
 
-  // Save reading position whenever focusIdx changes
+  // Save reading position to localStorage directly (bypass React state timing issues)
   const setFocusIdxAndSave = useCallback((valOrFn) => {
     setFocusIdx(prev => {
       const next = typeof valOrFn === "function" ? valOrFn(prev) : valOrFn;
-      onUpdateDoc(doc.id, { focusIdx: next });
+      focusIdxRef.current = next;
+      // Save directly to localStorage immediately — don't rely on onUpdateDoc timing
+      try {
+        const raw = localStorage.getItem("lectio-library-docs-v1");
+        const docs = raw ? JSON.parse(raw) : [];
+        const updated = docs.map(d => d.id === doc.id ? { ...d, focusIdx: next } : d);
+        localStorage.setItem("lectio-library-docs-v1", JSON.stringify(updated));
+      } catch (e) { console.error("Failed to save focusIdx", e); }
       return next;
     });
-  }, [doc.id, onUpdateDoc]);
+  }, [doc.id]);
   const [sourceLang, setSourceLang] = useState("en"); // "en" | "de"
   const contentRef = useRef(null);
 
