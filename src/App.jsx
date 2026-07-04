@@ -1121,8 +1121,8 @@ function ReviewView({ vocab, folders, onDone }) {
       if (e.key === " " && reviewMode === "flashcard" && !e.target.matches("input,textarea")) {
         e.preventDefault(); setFlipped(f => !f);
       }
-      // Ctrl+Alt+S — speak current card word
-      if (e.ctrlKey && e.altKey && e.key.toLowerCase() === "s") {
+      // Alt+S — speak current card word
+      if (e.altKey && !e.ctrlKey && !e.metaKey && e.key.toLowerCase() === "s") {
         e.preventDefault();
         const current = cards[idx];
         if (current) speak(current.original, current.sourceLang || "en");
@@ -1212,7 +1212,7 @@ function ReviewView({ vocab, folders, onDone }) {
                   <button style={styles.speakBtn}
                     onClick={e => { e.stopPropagation(); speak(card.original, card.sourceLang || "en"); }}>
                     🔊 Nghe</button>
-                  <div style={styles.flashHint}>Bấm thẻ để xem nghĩa · Space lật · Ctrl+Alt+S nghe</div>
+                  <div style={styles.flashHint}>Bấm thẻ để xem nghĩa · Space lật · Alt+S nghe</div>
                 </div>
               ) : (
                 <div style={styles.flashBack}>
