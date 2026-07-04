@@ -607,20 +607,23 @@ function ReaderView({ doc, onUpdateDoc, vocabSet, onAddVocab, onBack }) {
   const [translateError, setTranslateError] = useState(null);
   const [showSettings, setShowSettings] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
-
-  // Load saved position from its own key — simplest possible approach
   const posKey = `lectio-pos-${doc.id}`;
   const [focusIdx, setFocusIdx] = useState(() => {
     try { return parseInt(localStorage.getItem(posKey) || "0", 10) || 0; } catch { return 0; }
   });
+  const [jumpInput, setJumpInput] = useState(""); // for the editable counter
+
+  // Save position with useEffect — fires after every focusIdx change, guaranteed
+  useEffect(() => {
+    try { localStorage.setItem(posKey, String(focusIdx)); } catch (e) { console.error(e); }
+  }, [focusIdx, posKey]);
 
   const setFocusIdxAndSave = useCallback((valOrFn) => {
     setFocusIdx(prev => {
       const next = typeof valOrFn === "function" ? valOrFn(prev) : valOrFn;
-      try { localStorage.setItem(posKey, String(next)); } catch (e) { console.error(e); }
       return next;
     });
-  }, [posKey]);
+  }, []);
   const [sourceLang, setSourceLang] = useState("en"); // "en" | "de"
   const contentRef = useRef(null);
 
@@ -783,7 +786,29 @@ function ReaderView({ doc, onUpdateDoc, vocabSet, onAddVocab, onBack }) {
             <X size={15} /> Thoát
           </button>
           <div style={styles.focusDocTitle}>{doc.title}</div>
-          <div style={styles.focusCounter}>{focusIdx + 1} / {blocks.length}</div>
+          {/* Editable counter — click to type a sentence number and jump */}
+          <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+            <input
+              value={jumpInput !== "" ? jumpInput : String(focusIdx + 1)}
+              onChange={e => setJumpInput(e.target.value.replace(/[^0-9]/g, ""))}
+              onFocus={e => { setJumpInput(String(focusIdx + 1)); e.target.select(); }}
+              onBlur={() => {
+                const n = parseInt(jumpInput, 10);
+                if (!isNaN(n) && n >= 1 && n <= blocks.length) {
+                  setFocusIdxAndSave(n - 1);
+                  setSelection(null); setTranslation(null);
+                }
+                setJumpInput("");
+              }}
+              onKeyDown={e => {
+                if (e.key === "Enter") e.target.blur();
+                if (e.key === "Escape") { setJumpInput(""); e.target.blur(); }
+              }}
+              style={styles.jumpInput}
+              title="Nhập số câu để nhảy đến"
+            />
+            <span style={styles.focusCounter}>/ {blocks.length}</span>
+          </div>
         </div>
 
         {/* Progress bar */}
@@ -1965,6 +1990,19 @@ const styles = {
     fontSize: 13,
     color: "var(--ink-soft)",
     flexShrink: 0,
+  },
+  jumpInput: {
+    width: 52,
+    padding: "4px 6px",
+    borderRadius: 6,
+    border: "1px solid var(--line-strong)",
+    fontFamily: "var(--font-ui)",
+    fontSize: 13,
+    fontWeight: 600,
+    color: "var(--ink)",
+    background: "var(--paper)",
+    textAlign: "center",
+    cursor: "text",
   },
   focusProgressTrack: {
     position: "absolute",
